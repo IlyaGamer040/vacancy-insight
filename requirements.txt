@@ -1,0 +1,22 @@
+# Backend
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+sqlalchemy>=2.0.23
+psycopg2-binary>=2.9.9
+
+# Парсинг
+beautifulsoup4>=4.12.2
+requests>=2.31.0
+selenium>=4.15.2
+
+# Task Queue
+dramatiq[redis]>=1.15.0
+redis>=5.0.1
+
+# NLP (русский)
+natasha>=1.5.0
+spacy>=3.7.2
+nltk>=3.8.1
+
+# Админка
+django>=4.2.8
