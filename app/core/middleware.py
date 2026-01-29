@@ -4,6 +4,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 import time
 import logging
+import json
 from app.core.config import settings
 
 
@@ -28,10 +29,30 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     
 def setup_middleware(app):
     # CORS
+    allow_origins = settings.CORS_ORIGINS
+    if isinstance(allow_origins, str):
+        parsed = None
+        try:
+            parsed = json.loads(allow_origins)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, list):
+            allow_origins = parsed
+        else:
+            allow_origins = [
+                origin.strip() for origin in allow_origins.split(",") if origin.strip()
+            ]
+    if not allow_origins:
+        allow_origins = ["*"]
+
+    allow_credentials = True
+    if "*" in allow_origins:
+        allow_credentials = False
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.CORS_ORIGINS,
-        allow_credentials=True,
+        allow_origins=allow_origins,
+        allow_credentials=allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
     )
