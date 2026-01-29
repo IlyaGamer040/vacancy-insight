@@ -6,7 +6,7 @@ from .company import CompanyInVacancy
 from .experience import ExperienceInVacancy
 from .work_format import WorkFormatInVacancy
 from .work_schedule import WorkScheduleInVacancy
-from .skill import SkillInVacancy
+from .skill import SkillInVacancy, VacancySkillCreate
 
 # Базовые схемы
 class VacancyBase(BaseSchema):
@@ -28,7 +28,7 @@ class VacancyCreate(VacancyBase):
     experience_id: int
     work_format_id: int
     work_schedule_id: int
-    skills: List["VacancySkillCreate"] = []  # Навыки при создании
+    skills: List[VacancySkillCreate] = Field(default_factory=list)  # Навыки при создании
 
 class VacancyUpdate(BaseModel):
     title: Optional[str] = None
@@ -52,16 +52,16 @@ class VacancySimple(VacancyBase, TimestampMixin):
 
 # Полная вакансия со связанными объектами
 class Vacancy(VacancySimple):
-    company: CompanyInVacancy
-    experience: ExperienceInVacancy
-    work_format: WorkFormatInVacancy
-    work_schedule: WorkScheduleInVacancy
+    company: Optional[CompanyInVacancy] = None
+    experience: Optional[ExperienceInVacancy] = None
+    work_format: Optional[WorkFormatInVacancy] = None
+    work_schedule: Optional[WorkScheduleInVacancy] = None
     skills: List[SkillInVacancy] = []
 
 # Вакансия с деталями компании (для списков)
 class VacancyWithCompany(VacancySimple):
-    company: CompanyInVacancy
-    experience: ExperienceInVacancy
+    company: Optional[CompanyInVacancy] = None
+    experience: Optional[ExperienceInVacancy] = None
 
 # Для фильтрации и поиска
 class VacancyFilter(BaseModel):

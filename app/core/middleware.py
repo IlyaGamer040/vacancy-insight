@@ -4,6 +4,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 import time
 import logging
+from app.core.config import settings
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ def setup_middleware(app):
     # CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=app.settings.CORS_ORIGINS,
+        allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

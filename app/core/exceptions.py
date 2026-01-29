@@ -1,8 +1,10 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from sqlalchemy.exc import SQLAlchemyError
-from logging import Logger
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+import logging
+
+logger = logging.getLogger(__name__)
 
 class CustomException(Exception):
     def __init__(self, message: str, code: int = 400):
@@ -38,8 +40,16 @@ def setup_exception_handlers(app: FastAPI):
     
     @app.exception_handler(SQLAlchemyError)
     async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
-        Logger.error(f"Database error: {str(exc)}")
+        logger.error("Database error: %s", str(exc))
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "Database error occurred"},
+        )
+
+    @app.exception_handler(IntegrityError)
+    async def integrity_exception_handler(request: Request, exc: IntegrityError):
+        logger.warning("Integrity error: %s", str(exc))
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": "Integrity error: duplicate or invalid reference"},
         )

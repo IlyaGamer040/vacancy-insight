@@ -1,10 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from app.schemas.vacancy import Vacancy, VacancyCreate, VacancyWithCompany, VacancyFilter
 from app.crud.vacancy import vacancy_crud
 from app.core.database import get_db
+from app.models.company import Company
+from app.models.experience import Experience
+from app.models.work_format import WorkFormat
+from app.models.work_schedule import WorkSchedule
+from app.models.skill import Skill
 
 router = APIRouter()
 
@@ -23,6 +29,43 @@ async def create_vacancy(
     :param db: Description
     :type db: AsyncSession
     """
+    company = await db.execute(
+        select(Company).where(Company.company_id == vacancy_in.company_id)
+    )
+    if not company.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    experience = await db.execute(
+        select(Experience).where(Experience.experience_id == vacancy_in.experience_id)
+    )
+    if not experience.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Experience not found")
+
+    work_format = await db.execute(
+        select(WorkFormat).where(WorkFormat.work_format_id == vacancy_in.work_format_id)
+    )
+    if not work_format.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Work format not found")
+
+    work_schedule = await db.execute(
+        select(WorkSchedule).where(WorkSchedule.work_schedule_id == vacancy_in.work_schedule_id)
+    )
+    if not work_schedule.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Work schedule not found")
+
+    if vacancy_in.skills:
+        skill_ids = [skill.skill_id for skill in vacancy_in.skills]
+        result = await db.execute(
+            select(Skill.skill_id).where(Skill.skill_id.in_(skill_ids))
+        )
+        found_skill_ids = {row[0] for row in result.all()}
+        missing_skill_ids = sorted(set(skill_ids) - found_skill_ids)
+        if missing_skill_ids:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Skills not found: {missing_skill_ids}",
+            )
+
     vacancy = await vacancy_crud.create(db, obj_in=vacancy_in)
     return vacancy
 

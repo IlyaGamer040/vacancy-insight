@@ -13,3 +13,11 @@ class VacancySkill(Base):
 
     vacancy = relationship("Vacancy", back_populates="skills")
     skill = relationship("Skill", back_populates="vacancies")
+
+    @property
+    def name(self):
+        return self.skill.name if self.skill else None
+
+    @property
+    def category(self):
+        return self.skill.category if self.skill else None

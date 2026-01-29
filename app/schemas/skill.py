@@ -31,7 +31,7 @@ class VacancySkillCreate(VacancySkillBase):
 
 class SkillInVacancy(BaseSchema):
     skill_id: int
-    name: str
+    name: Optional[str] = None
     category: Optional[str] = None
     is_mandatory: bool
     

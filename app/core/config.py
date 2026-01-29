@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = getenv("SECRET_KEY")
     ALGORITHM: str = getenv("ALGORITHM")
-    ACCESS_TOKEN_EXPIRE_MIN: int = getenv("ACCESS_TOKEN_EXPIRE_MIN")\
+    ACCESS_TOKEN_EXPIRE_MIN: int = getenv("ACCESS_TOKEN_EXPIRE_MIN")
     
     # Application
     DEBUG: bool = False

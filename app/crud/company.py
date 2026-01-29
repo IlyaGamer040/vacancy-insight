@@ -27,7 +27,10 @@ class CRUDCompany:
         return result.scalars().all()
     
     async def create(self, db: AsyncSession, obj_in: CompanyCreate) -> Company:
-        db_obj = Company(**obj_in.model_dump())
+        company_data = obj_in.model_dump()
+        if company_data.get("website") is not None:
+            company_data["website"] = str(company_data["website"])
+        db_obj = Company(**company_data)
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)

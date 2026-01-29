@@ -23,6 +23,8 @@ class CRUDVacancy:
     
     async def create(self, db: AsyncSession, obj_in: VacancyCreate) -> Vacancy:
         vacancy_data = obj_in.model_dump(exclude={"skills"})
+        if vacancy_data.get("source_url") is not None:
+            vacancy_data["source_url"] = str(vacancy_data["source_url"])
         db_obj = Vacancy(**vacancy_data)
         db.add(db_obj)
         await db.commit()
@@ -33,13 +35,13 @@ class CRUDVacancy:
                 vacancy_skill = VacancySkill(
                     vacancy_id=db_obj.vacancy_id,
                     skill_id=skill_data.skill_id,
-                    is_mandatory=skill_data.is_mandatory
+                    is_mandatory=skill_data.in_mandatory
                 )
                 db.add(vacancy_skill)
             await db.commit()
-            await db.refresh(db_obj)
 
-        return db_obj
+        # Возвращаем объект с подгруженными связями для корректного ответа API
+        return await self.get(db, vacancy_id=db_obj.vacancy_id)
     
     async def filter(self, db: AsyncSession, filter: VacancyFilter) -> List[Vacancy]:
         query = select(Vacancy).options(
