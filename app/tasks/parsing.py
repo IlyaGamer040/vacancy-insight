@@ -1,6 +1,6 @@
 from celery import shared_task
 from app.services.parsers.hh_parser import HHParser
-from app.db import SessionLocal
+from app.core.database import AsyncSessionLocal
 from app.crud.vacancy import vacancy_crud
 
 @shared_task
@@ -12,19 +12,15 @@ def parse_hh_vacancies(search_query: str):
         async with parser:
             vacancies_data = await parser.parse_vacancies(search_query, limit=50)
             
-            db = SessionLocal()
-            try:
+            async with AsyncSessionLocal() as db:
                 for vacancy_data in vacancies_data:
-                    # Проверяем, нет ли уже такой вакансии
-                    existing = await vacancy_crud.get_by_source_url(
-                        db, vacancy_data["source_url"]
-                    )
+                    source_url = vacancy_data.get("source_url")
+                    if not source_url:
+                        continue
+                    existing = await vacancy_crud.get_by_source_url(db, source_url)
                     if not existing:
-                        await vacancy_crud.create_from_parsed(db, vacancy_data)
-                
+                        await vacancy_crud.create_from_parsed(db, vacancy_data, commit=False)
                 await db.commit()
-            finally:
-                await db.close()
     
     # Запускаем асинхронную функцию
     import asyncio

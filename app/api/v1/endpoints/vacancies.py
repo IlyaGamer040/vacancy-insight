@@ -11,6 +11,7 @@ from app.models.experience import Experience
 from app.models.work_format import WorkFormat
 from app.models.work_schedule import WorkSchedule
 from app.models.skill import Skill
+from app.services.parsers.hh_parser import HHParser
 
 router = APIRouter()
 
@@ -145,3 +146,45 @@ async def read_company_vacancies(
     )
     vacancies = result.scalars().all()
     return vacancies
+
+
+@router.post("/parse/hh")
+async def parse_hh_vacancies(
+    q: str = Query(..., description="Поисковый запрос"),
+    limit: int = Query(50, ge=1, le=200),
+    area: int = Query(1, description="ID региона hh.ru (1 = Москва)"),
+    only_with_salary: bool = Query(False),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Запустить парсинг hh.ru и сохранить вакансии в БД
+    """
+    parser = HHParser()
+    async with parser:
+        vacancies_data = await parser.parse_vacancies(
+            search_query=q,
+            limit=limit,
+            area=area,
+            only_with_salary=only_with_salary,
+        )
+
+    created = 0
+    skipped = 0
+    for vacancy_data in vacancies_data:
+        source_url = vacancy_data.get("source_url")
+        if not source_url:
+            skipped += 1
+            continue
+        existing = await vacancy_crud.get_by_source_url(db, source_url)
+        if existing:
+            skipped += 1
+            continue
+        await vacancy_crud.create_from_parsed(db, vacancy_data, commit=False)
+        created += 1
+
+    await db.commit()
+    return {
+        "parsed": len(vacancies_data),
+        "created": created,
+        "skipped": skipped,
+    }
