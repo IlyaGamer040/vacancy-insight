@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
+import asyncio
 import sys
 import os
 
@@ -10,6 +11,7 @@ from app.core.exceptions import setup_exception_handlers
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.database import engine, Base
+from app.core.polling_runner import polling_loop
 import logging
 
 
@@ -33,7 +35,13 @@ async def lifespan(app: FastAPI):
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database created successfuly")
 
-    yield
+    polling_task = asyncio.create_task(polling_loop())
+    try:
+        yield
+    finally:
+        polling_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await polling_task
 
 
     logger.info("Stutting down app...")

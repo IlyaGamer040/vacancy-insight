@@ -5,7 +5,7 @@ const DEFAULTS = {
   minSalary: "",
   maxSalary: "",
   limit: 20,
-  intervalMinutes: 1,
+  intervalSeconds: 60,
   enabled: true
 };
 
@@ -35,20 +35,26 @@ async function loadSettings() {
     ...DEFAULTS,
     lastChecked: null,
     lastCount: null,
-    lastError: null
+    lastError: null,
+    pollingStatus: null
   });
+  if (!settings.intervalSeconds && settings.intervalMinutes) {
+    settings.intervalSeconds = Number(settings.intervalMinutes) * 60;
+  }
   $("apiBase").value = settings.apiBase;
   $("title").value = settings.title;
   $("location").value = settings.location;
   $("minSalary").value = settings.minSalary;
   $("maxSalary").value = settings.maxSalary;
   $("limit").value = settings.limit;
-  $("intervalMinutes").value = settings.intervalMinutes;
+  $("intervalSeconds").value = settings.intervalSeconds;
   $("enabled").checked = settings.enabled;
   setIndicator(settings);
+  $("pollingStatus").textContent = settings.pollingStatus || "Polling: —";
 }
 
 async function saveSettings() {
+  const intervalSeconds = Math.max(10, Number($("intervalSeconds").value) || 60);
   const settings = {
     apiBase: $("apiBase").value.trim(),
     title: $("title").value.trim(),
@@ -56,17 +62,39 @@ async function saveSettings() {
     minSalary: $("minSalary").value,
     maxSalary: $("maxSalary").value,
     limit: Number($("limit").value) || 20,
-    intervalMinutes: Number($("intervalMinutes").value) || 5,
+    intervalSeconds,
     enabled: $("enabled").checked
   };
 
   await chrome.storage.local.set(settings);
   await chrome.storage.local.set({ lastChecked: null });
+  try {
+    await fetch(`${settings.apiBase.replace(/\/+$/, "")}/vacancies/polling-settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        enabled: settings.enabled,
+        title: settings.title || null,
+        location: settings.location || null,
+        min_salary: settings.minSalary ? Number(settings.minSalary) : null,
+        max_salary: settings.maxSalary ? Number(settings.maxSalary) : null,
+        limit: settings.limit,
+        area: 1,
+        only_with_salary: Boolean(settings.minSalary || settings.maxSalary)
+      })
+    });
+  } catch (error) {
+    setStatus("Не удалось сохранить критерии в API");
+  }
   chrome.runtime.sendMessage({
     type: "update_settings",
-    intervalMinutes: settings.intervalMinutes
+    intervalSeconds: settings.intervalSeconds
   });
-  setStatus("Сохранено");
+  if (intervalSeconds > Number($("intervalSeconds").value || 0)) {
+    setStatus("Минимум 10 сек, применено 10");
+  } else {
+    setStatus("Сохранено");
+  }
 }
 
 async function checkNow() {
@@ -82,9 +110,22 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 chrome.storage.onChanged.addListener((changes) => {
-  if (changes.lastChecked || changes.lastCount || changes.lastError) {
+  if (
+    changes.lastChecked ||
+    changes.lastCount ||
+    changes.lastError ||
+    changes.pollingStatus
+  ) {
     chrome.storage.local
-      .get({ lastChecked: null, lastCount: null, lastError: null })
-      .then(setIndicator);
+      .get({
+        lastChecked: null,
+        lastCount: null,
+        lastError: null,
+        pollingStatus: null
+      })
+      .then((data) => {
+        setIndicator(data);
+        $("pollingStatus").textContent = data.pollingStatus || "Polling: —";
+      });
   }
 });

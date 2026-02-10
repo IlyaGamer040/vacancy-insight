@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Cache
     CACHE_MAX_AGE: int = int(getenv("CACHE_MAX_AGE", "60"))
 
+    # Polling
+    POLLING_INTERVAL_SECONDS: int = int(getenv("POLLING_INTERVAL_SECONDS", "60"))
+
     class Config:
         env_file = ".env"
         case_sensitive = True

@@ -5,66 +5,48 @@ const DEFAULTS = {
   minSalary: "",
   maxSalary: "",
   limit: 20,
-  intervalMinutes: 1,
+  intervalSeconds: 60,
   enabled: true,
   lastChecked: null,
   lastCount: null,
-  lastError: null
+  lastError: null,
+  pollingStatus: null
 };
 
-function scheduleAlarm(intervalMinutes) {
-  const minutes = Math.max(1, Number(intervalMinutes) || 5);
-  chrome.alarms.create("pollVacancies", { periodInMinutes: minutes });
-}
+const ALARM_NAME = "pollVacancies";
 
 async function getSettings() {
   return await chrome.storage.local.get(DEFAULTS);
 }
 
-function buildUrl(base, params, path) {
-  const url = new URL(base.replace(/\/+$/, "") + path);
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && String(value).trim() !== "") {
-      url.searchParams.set(key, value);
-    }
-  });
+function buildCountUrl(settings) {
+  const base = settings.apiBase.replace(/\/+$/, "");
+  const url = new URL(base + "/vacancies/count");
+  if (settings.title) url.searchParams.set("title", settings.title);
+  if (settings.location) url.searchParams.set("location", settings.location);
+  if (settings.minSalary) url.searchParams.set("min_salary", settings.minSalary);
+  if (settings.maxSalary) url.searchParams.set("max_salary", settings.maxSalary);
+  if (settings.limit) url.searchParams.set("limit", settings.limit);
   return url.toString();
-}
-
-function toIsoWithOffset(date) {
-  return date.toISOString().replace("Z", "+00:00");
 }
 
 async function pollNow() {
   const settings = await getSettings();
-  if (!settings.enabled) {
-    return;
-  }
+  if (!settings.enabled) return;
 
-  const now = toIsoWithOffset(new Date());
-
-  const params = {
-    title: settings.title,
-    location: settings.location,
-    min_salary: settings.minSalary,
-    max_salary: settings.maxSalary,
-    limit: settings.limit
-  };
-
-  const countUrl = buildUrl(settings.apiBase, params, "/vacancies/count");
+  const now = new Date().toISOString().replace("Z", "+00:00");
+  const countUrl = buildCountUrl(settings);
 
   try {
     const response = await fetch(countUrl);
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-    const payload = await response.json();
-    const count = Number(payload?.count ?? 0);
+    if (!response.ok) throw new Error(`API ${response.status}`);
+    const data = await response.json();
+    const count = Number(data?.count ?? 0);
     const prevCount = Number(settings.lastCount ?? 0);
 
-    if (prevCount && count > prevCount) {
+    if (prevCount > 0 && count > prevCount) {
       const delta = count - prevCount;
-      chrome.notifications.create(`vacancy-${Date.now()}`, {
+      chrome.notifications.create(`vac-${Date.now()}`, {
         type: "basic",
         iconUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAKklEQVR42mNgGAXUADYyYGBg+M+ABgaG/0M0I1CqgCkGAAAjUQkZJ6Q2cAAAAASUVORK5CYII=",
         title: "Новые вакансии",
@@ -79,48 +61,47 @@ async function pollNow() {
     await chrome.storage.local.set({
       lastChecked: now,
       lastCount: count,
-      lastError: null
+      lastError: null,
+      pollingStatus: `Polling: OK (${new Date().toLocaleTimeString()})`
     });
   } catch (error) {
-    console.error("Polling failed", error);
     await chrome.storage.local.set({
       lastChecked: now,
-      lastCount: 0,
-      lastError: error?.message || "Ошибка запроса"
+      lastError: error?.message || "Ошибка",
+      pollingStatus: `Polling: ошибка (${new Date().toLocaleTimeString()})`
     });
   }
 }
 
-chrome.runtime.onInstalled.addListener(async () => {
-  const settings = await getSettings();
-  await chrome.storage.local.set(settings);
-  scheduleAlarm(settings.intervalMinutes);
-});
-
-chrome.runtime.onStartup.addListener(async () => {
-  const settings = await getSettings();
-  scheduleAlarm(settings.intervalMinutes);
-  pollNow();
-});
+// --- Alarm ---
+chrome.alarms.create(ALARM_NAME, { delayInMinutes: 0.5, periodInMinutes: 1 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "pollVacancies") {
+  if (alarm.name === ALARM_NAME) {
     pollNow();
   }
 });
 
+// --- При установке / запуске ---
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.alarms.create(ALARM_NAME, { delayInMinutes: 0.5, periodInMinutes: 1 });
+  pollNow();
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  chrome.alarms.create(ALARM_NAME, { delayInMinutes: 0.5, periodInMinutes: 1 });
+  pollNow();
+});
+
+// --- Сообщения из popup ---
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "poll_now") {
     pollNow().then(() => sendResponse({ ok: true }));
     return true;
   }
-
   if (message?.type === "update_settings") {
-    scheduleAlarm(message.intervalMinutes);
-    pollNow();
-    sendResponse({ ok: true });
+    pollNow().then(() => sendResponse({ ok: true }));
     return true;
   }
-
   return false;
 });

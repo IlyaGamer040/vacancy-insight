@@ -4,9 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from app.schemas.vacancy import Vacancy, VacancyCreate, VacancyWithCompany, VacancyFilter
+from app.schemas.polling import PollingSettings
 from app.crud.vacancy import vacancy_crud
 from app.core.database import get_db
 from app.core.config import settings
+from app.core.polling import load_polling_state, save_polling_state
 from app.models.company import Company
 from app.models.experience import Experience
 from app.models.work_format import WorkFormat
@@ -139,6 +141,17 @@ async def read_vacancy_updates(
         )
         response.append(payload)
     return response
+
+
+@router.get("/polling-settings", response_model=PollingSettings)
+async def get_polling_settings():
+    return load_polling_state()
+
+
+@router.post("/polling-settings", response_model=PollingSettings)
+async def update_polling_settings(settings_in: PollingSettings):
+    saved = save_polling_state(settings_in.model_dump())
+    return saved
 
 
 @router.get("/count")

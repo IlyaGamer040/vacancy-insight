@@ -18,6 +18,7 @@ class HHParser(BaseParser):
         limit: int = 100,
         area: Optional[int] = None,
         only_with_salary: bool = False,
+        light: bool = False,
     ) -> List[Dict[str, Any]]:
         vacancies: List[Dict[str, Any]] = []
         page = 0
@@ -50,7 +51,10 @@ class HHParser(BaseParser):
                         break
 
                     for item in items:
-                        vacancy = await self.parse_vacancy_detail(session, item["id"])
+                        if light:
+                            vacancy = self._parse_from_list_item(item)
+                        else:
+                            vacancy = await self.parse_vacancy_detail(session, item["id"])
                         if vacancy:
                             vacancies.append(vacancy)
                         if len(vacancies) >= limit:
@@ -62,6 +66,42 @@ class HHParser(BaseParser):
                 await session.close()
 
         return vacancies[:limit]
+
+    def _parse_from_list_item(self, item: Dict[str, Any]) -> Dict[str, Any]:
+        """Быстрый парсинг из элемента списка (без доп. запроса)."""
+        salary = self.normalize_salary(item.get("salary"))
+        snippet = item.get("snippet") or {}
+        description = ""
+        if snippet.get("requirement"):
+            description += self._html_to_text(snippet["requirement"]) + " "
+        if snippet.get("responsibility"):
+            description += self._html_to_text(snippet["responsibility"])
+        description = description.strip()
+
+        skills = self.parse_skills(description)
+
+        address_raw = None
+        address_data = item.get("address") or {}
+        if isinstance(address_data, dict):
+            address_raw = address_data.get("raw")
+
+        return {
+            "title": item.get("name", ""),
+            "description": description,
+            "salary": salary,
+            "company": {
+                "name": (item.get("employer") or {}).get("name", ""),
+                "website": (item.get("employer") or {}).get("site_url", ""),
+            },
+            "experience": (item.get("experience") or {}).get("name", ""),
+            "work_format": self.parse_work_format(item),
+            "work_schedule": self.parse_work_schedule(item),
+            "location": (item.get("area") or {}).get("name", ""),
+            "raw_address": address_raw,
+            "skills": skills,
+            "source_url": item.get("alternate_url", ""),
+            "published_date": self.parse_published_date(item.get("published_at")),
+        }
 
     async def parse_vacancy_detail(self, session: aiohttp.ClientSession, vacancy_id: str) -> Optional[Dict[str, Any]]:
         async with session.get(f"{self.BASE_URL}/vacancies/{vacancy_id}") as resp:

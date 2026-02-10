@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "title": "FastAPI",
+  "location": null,
+  "min_salary": null,
+  "max_salary": null,
+  "limit": 20,
+  "area": 1,
+  "only_with_salary": false
+}
