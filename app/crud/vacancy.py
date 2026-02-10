@@ -14,6 +14,56 @@ from app.models.skill import Skill
 from app.schemas.vacancy import VacancyCreate, VacancyFilter
 
 class CRUDVacancy:
+    def _build_conditions(self, filter: VacancyFilter):
+        conditions = []
+
+        if filter.title:
+            conditions.append(
+                or_(
+                    Vacancy.title.ilike(f"%{filter.title}%"),
+                    Vacancy.description.ilike(f"%{filter.title}%"),
+                )
+            )
+        if filter.company_id:
+            conditions.append(Vacancy.company_id == filter.company_id)
+        if filter.experience_id:
+            conditions.append(Vacancy.experience_id == filter.experience_id)
+        if filter.work_format_id:
+            conditions.append(Vacancy.work_format_id == filter.work_format_id)
+        if filter.work_schedule_id:
+            conditions.append(Vacancy.work_schedule_id == filter.work_schedule_id)
+        if filter.location:
+            conditions.append(Vacancy.location.ilike(f"%{filter.location}%"))
+        if filter.min_salary:
+            conditions.append(
+                or_(
+                    Vacancy.salary_from >= filter.min_salary,
+                    Vacancy.salary_to >= filter.min_salary
+                )
+            )
+        if filter.max_salary:
+            conditions.append(
+                or_(
+                    Vacancy.salary_from <= filter.max_salary,
+                    Vacancy.salary_to <= filter.max_salary
+                )
+            )
+        if filter.currency:
+            conditions.append(Vacancy.currency == filter.currency)
+        if filter.is_active is not None:
+            conditions.append(Vacancy.is_active == filter.is_active)
+        if filter.since:
+            parsed_since = self._safe_parse_datetime(filter.since)
+            if parsed_since:
+                conditions.append(
+                    or_(
+                        Vacancy.published_date >= parsed_since,
+                        Vacancy.created_at >= parsed_since,
+                    )
+                )
+
+        return conditions
+
     async def get(self, db: AsyncSession, vacancy_id: int) -> Optional[Vacancy]:
         result = await db.execute(
             select(Vacancy)
@@ -261,39 +311,7 @@ class CRUDVacancy:
             selectinload(Vacancy.company),
             selectinload(Vacancy.experience)
         )
-
-        conditions = []
-
-        if filter.title:
-            conditions.append(Vacancy.title.ilike(f"%{filter.title}%"))
-        if filter.company_id:
-            conditions.append(Vacancy.company_id == filter.company_id)
-        if filter.experience_id:
-            conditions.append(Vacancy.experience_id == filter.experience_id)
-        if filter.work_format_id:
-            conditions.append(Vacancy.work_format_id == filter.work_format_id)
-        if filter.work_schedule_id:
-            conditions.append(Vacancy.work_schedule_id == filter.work_schedule_id)
-        if filter.location:
-            conditions.append(Vacancy.location.ilike(f"%{filter.location}%"))
-        if filter.min_salary:
-            conditions.append(
-                or_(
-                    Vacancy.salary_from >= filter.min_salary,
-                    Vacancy.salary_to >= filter.min_salary
-                )
-            )
-        if filter.max_salary:
-            conditions.append(
-                or_(
-                    Vacancy.salary_from <= filter.max_salary,
-                    Vacancy.salary_to <= filter.max_salary
-                )
-            )
-        if filter.currency:
-            conditions.append(Vacancy.currency == filter.currency)
-        if filter.is_active is not None:
-            conditions.append(Vacancy.is_active == filter.is_active)
+        conditions = self._build_conditions(filter)
 
         if conditions:
             query = query.where(and_(*conditions))

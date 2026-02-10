@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vacancy Insight</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Vacancy Insight</h1>
+
+      <label class="field">
+        <span>API base URL</span>
+        <input id="apiBase" type="text" placeholder="http://localhost:8090/api/v1" />
+      </label>
+
+      <label class="field">
+        <span>Ключевое слово</span>
+        <input id="title" type="text" placeholder="python" />
+      </label>
+
+      <label class="field">
+        <span>Локация</span>
+        <input id="location" type="text" placeholder="Москва" />
+      </label>
+
+      <div class="row">
+        <label class="field">
+          <span>ЗП от</span>
+          <input id="minSalary" type="number" min="0" />
+        </label>
+        <label class="field">
+          <span>ЗП до</span>
+          <input id="maxSalary" type="number" min="0" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Лимит результатов</span>
+        <input id="limit" type="number" min="1" max="200" />
+      </label>
+
+      <label class="field">
+        <span>Интервал проверки (мин)</span>
+        <input id="intervalMinutes" type="number" min="1" />
+      </label>
+
+      <label class="checkbox">
+        <input id="enabled" type="checkbox" />
+        <span>Включить уведомления</span>
+      </label>
+
+      <div class="actions">
+        <button id="save">Сохранить</button>
+        <button id="check">Проверить сейчас</button>
+      </div>
+
+      <div class="status">
+        <div id="status"></div>
+        <div id="lastCheck"></div>
+        <div id="lastCount"></div>
+        <div id="lastError"></div>
+      </div>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

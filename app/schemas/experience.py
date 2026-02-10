@@ -1,4 +1,5 @@
-from .base import BaseSchema
+from typing import Optional, List
+from .base import BaseSchema, Link
 
 class ExperienceBase(BaseSchema):
     name: str
@@ -11,6 +12,7 @@ class ExperienceCreate(ExperienceBase):
 
 class Experience(ExperienceBase):
     experience_id: int
+    links: Optional[List[Link]] = None
 
 
 # Для вложенного отображения

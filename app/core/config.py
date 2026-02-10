@@ -21,10 +21,14 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: List[str] = getenv("CORS_ORIGINS", ["*"])
+    CORS_ORIGIN_REGEX: str | None = getenv("CORS_ORIGIN_REGEX")
 
     # External APIs
     HH_API_URL: str = getenv("HH_API_URL", "https://api.hh.ru")
     SUPERJOB_API_KEY: str = getenv("SUPERJOB_API_KEY")
+
+    # Cache
+    CACHE_MAX_AGE: int = int(getenv("CACHE_MAX_AGE", "60"))
 
     class Config:
         env_file = ".env"

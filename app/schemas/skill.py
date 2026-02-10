@@ -1,6 +1,6 @@
 from pydantic import BaseModel
-from typing import Optional
-from .base import BaseSchema
+from typing import Optional, List
+from .base import BaseSchema, Link
 
 class SkillBase(BaseSchema):
     name: str
@@ -18,6 +18,7 @@ class SkillUpdate(BaseModel):
 
 class Skill(SkillBase):
     skill_id: int
+    links: Optional[List[Link]] = None
 
 
 class VacancySkillBase(BaseSchema):

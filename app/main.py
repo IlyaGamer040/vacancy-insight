@@ -1,5 +1,10 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app.core.middleware import setup_middleware
 from app.core.exceptions import setup_exception_handlers
 from app.api.v1.api import api_router

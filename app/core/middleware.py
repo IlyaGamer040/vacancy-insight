@@ -26,6 +26,20 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
         response.headers["X-Process-Time"] = str(process_time)
         return response
+
+
+class CacheControlMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        if request.url.path.startswith(settings.API_V1_PREFIX):
+            if request.method in {"GET", "HEAD"}:
+                if "Cache-Control" not in response.headers:
+                    response.headers["Cache-Control"] = f"public, max-age={settings.CACHE_MAX_AGE}"
+            else:
+                response.headers["Cache-Control"] = "no-store"
+
+        return response
     
 def setup_middleware(app):
     # CORS
@@ -49,12 +63,15 @@ def setup_middleware(app):
     if "*" in allow_origins:
         allow_credentials = False
 
+    allow_origin_regex = settings.CORS_ORIGIN_REGEX or r"chrome-extension://.*"
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allow_origins,
         allow_credentials=allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
+        allow_origin_regex=allow_origin_regex,
     )
 
     # GZip
@@ -62,3 +79,6 @@ def setup_middleware(app):
 
     # Logging
     app.add_middleware(LoggingMiddleware)
+
+    # Cache-Control headers
+    app.add_middleware(CacheControlMiddleware)

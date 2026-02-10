@@ -1,4 +1,5 @@
-from .base import BaseSchema
+from typing import Optional, List
+from .base import BaseSchema, Link
 
 class WordScheduleBase(BaseSchema):
     name: str
@@ -10,6 +11,7 @@ class WorkScheduleCreate(WordScheduleBase):
 
 class WorkSchedule(WordScheduleBase):
     work_schedule_id: int
+    links: Optional[List[Link]] = None
 
 
 class WorkScheduleInVacancy(BaseSchema):

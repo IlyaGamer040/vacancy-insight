@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from app.api.deps import get_db
 from app.crud.vacancy import vacancy_crud
 from app.schemas.vacancy import VacancyWithCompany
+from app.core.config import settings
+from app.api.links import resource_links
 
 router = APIRouter()
 
@@ -19,7 +21,8 @@ async def search_vacancies(
     remote_only: bool = False,
     skip: int = 0,
     limit: int = 50,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    request: Request = None
 ):
     """Расширенный поиск вакансий"""
     from sqlalchemy import select, or_, and_
@@ -90,4 +93,13 @@ async def search_vacancies(
     
     result = await db.execute(query)
     vacancies = result.scalars().all()
-    return vacancies
+    response: List[VacancyWithCompany] = []
+    for vacancy in vacancies:
+        payload = VacancyWithCompany.model_validate(vacancy).model_dump()
+        payload["links"] = resource_links(
+            request,
+            f"{settings.API_V1_PREFIX}/vacancies/{vacancy.vacancy_id}",
+            f"{settings.API_V1_PREFIX}/vacancies",
+        )
+        response.append(payload)
+    return response

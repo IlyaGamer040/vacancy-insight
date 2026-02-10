@@ -1,6 +1,6 @@
 from pydantic import BaseModel, HttpUrl
-from typing import Optional
-from .base import BaseSchema, TimestampMixin
+from typing import Optional, List
+from .base import BaseSchema, TimestampMixin, Link
 
 
 # Базовые схемы
@@ -28,7 +28,7 @@ class CompanySimple(CompanyBase, TimestampMixin):
 
 
 class Company(CompanySimple):
-    pass
+    links: Optional[List[Link]] = None
 
 
 # Для вложенного отображения

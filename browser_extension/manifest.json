@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Vacancy Insight",
+  "version": "0.1.0",
+  "description": "Уведомления о новых вакансиях с hh.ru по выбранным критериям",
+  "permissions": ["storage", "alarms", "notifications"],
+  "host_permissions": [
+    "http://localhost:8090/*",
+    "http://127.0.0.1:8090/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Vacancy Insight"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

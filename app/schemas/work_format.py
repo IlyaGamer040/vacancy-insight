@@ -1,4 +1,5 @@
-from .base import BaseSchema
+from typing import Optional, List
+from .base import BaseSchema, Link
 
 class WorkFormatBase(BaseSchema):
     name: str
@@ -10,6 +11,7 @@ class WorkFormatCreate(WorkFormatBase):
 
 class WorkFormat(WorkFormatBase):
     work_format_id: int
+    links: Optional[List[Link]] = None
 
 
 class WorkFormatInVacancy(BaseSchema):

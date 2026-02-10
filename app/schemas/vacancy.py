@@ -1,7 +1,7 @@
 from pydantic import BaseModel, HttpUrl, Field
 from typing import Optional, List
 from datetime import datetime
-from .base import BaseSchema, TimestampMixin
+from .base import BaseSchema, TimestampMixin, Link
 from .company import CompanyInVacancy
 from .experience import ExperienceInVacancy
 from .work_format import WorkFormatInVacancy
@@ -57,11 +57,13 @@ class Vacancy(VacancySimple):
     work_format: Optional[WorkFormatInVacancy] = None
     work_schedule: Optional[WorkScheduleInVacancy] = None
     skills: List[SkillInVacancy] = []
+    links: Optional[List[Link]] = None
 
 # Вакансия с деталями компании (для списков)
 class VacancyWithCompany(VacancySimple):
     company: Optional[CompanyInVacancy] = None
     experience: Optional[ExperienceInVacancy] = None
+    links: Optional[List[Link]] = None
 
 # Для фильтрации и поиска
 class VacancyFilter(BaseModel):
@@ -76,6 +78,7 @@ class VacancyFilter(BaseModel):
     currency: Optional[str] = None
     skill_ids: Optional[List[int]] = None
     is_active: Optional[bool] = True
+    since: Optional[str] = None
     offset: int = 0
     limit: int = Field(100, le=1000)
 
